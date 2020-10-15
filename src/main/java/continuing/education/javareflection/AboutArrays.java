@@ -47,4 +47,5 @@ public class AboutArrays {
 
         System.out.println(String.format("component type %s", componentType.getTypeName()));
     }
+
 }
