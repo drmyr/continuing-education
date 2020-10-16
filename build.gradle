@@ -23,8 +23,10 @@ repositories {
 
 dependencies {
     // Use Scala 2.13 in our library project
-    compileOnly('org.projectlombok:lombok:1.18.10')
 
+    implementation('org.apache.zookeeper:zookeeper:3.6.2')
+
+    compileOnly('org.projectlombok:lombok:1.18.10')
     annotationProcessor('org.projectlombok:lombok:1.18.10')
     implementation 'org.scala-lang:scala-library:2.13.2'
 
