@@ -1,4 +1,4 @@
-package continuing.education.zookeeper;
+package continuing.education.distributedsystems.zookeeper;
 
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;

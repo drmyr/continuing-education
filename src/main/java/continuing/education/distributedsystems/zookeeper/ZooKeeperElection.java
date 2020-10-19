@@ -1,4 +1,4 @@
-package continuing.education.zookeeper;
+package continuing.education.distributedsystems.zookeeper;
 
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
@@ -67,7 +67,8 @@ public class ZooKeeperElection implements Watcher {
                 // Watcher is registered as a one time event handler for any events associated to the ZNode
                 // it is registered to.
 
-                // Remember, the method will only run if the znode we are interested in has an event.
+                // Remember, the method will only run if the caller that has registered this znode gets an event,
+                // and not for all znodes that register with ZK
                 predecessorStat = zk.exists(ELECTION_NAMESPACE + "/" + predecessorZNodeName, this);
             }
         } while(isNull(predecessorStat));

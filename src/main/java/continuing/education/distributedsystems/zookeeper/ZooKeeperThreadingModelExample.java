@@ -1,15 +1,12 @@
-package continuing.education.zookeeper;
+package continuing.education.distributedsystems.zookeeper;
 
 import lombok.AccessLevel;
+import lombok.Setter;
 import lombok.experimental.FieldDefaults;
 import lombok.val;
 import org.apache.zookeeper.*;
-import org.apache.zookeeper.data.Stat;
 
 import java.io.IOException;
-import java.util.Collections;
-
-import static java.util.Objects.isNull;
 
 /**
  * use the zkCli.sh script to communicate with the zookeeper server over command line.
@@ -28,21 +25,19 @@ import static java.util.Objects.isNull;
  *
  */
 
-@FieldDefaults(makeFinal = true, level = AccessLevel.PRIVATE)
+@FieldDefaults(level = AccessLevel.PRIVATE)
 public class ZooKeeperThreadingModelExample implements Watcher {
     private static final String ZK_ADDY = "localhost:2181";
     private static final int SESSION_TIMEOUT = 3000;
 
-    Object monitor;
-    ZooKeeperThreadingModelExample() {
-        this.monitor = new Object();
-    }
+    @Setter
+    ZooKeeper zooKeeper;
 
     public static void main(final String[] args) throws InterruptedException, KeeperException, IOException {
 
-        val election = new ZooKeeperThreadingModelExample();
-
-        val zk = new ZooKeeper(ZK_ADDY, SESSION_TIMEOUT, election);
+        val threadingModel = new ZooKeeperThreadingModelExample();
+        val zk = new ZooKeeper(ZK_ADDY, SESSION_TIMEOUT, threadingModel);
+        threadingModel.setZooKeeper(zk);
 
         val service = new ServiceRegistryDiscovery(zk);
         val onElection = new OnElectionActon(service, 8080);
@@ -50,32 +45,32 @@ public class ZooKeeperThreadingModelExample implements Watcher {
 
         val myZNode = elector.volunteerForLeadership();
         elector.electLeader();
-        election.watchTargetZNode(zk);
-        election.run();
-        election.close(zk);
+        threadingModel.watchTargetZNode();
+        threadingModel.run();
+        threadingModel.close();
     }
 
     public void run() throws InterruptedException {
-        synchronized (monitor) {
-            monitor.wait();
+        synchronized (zooKeeper) {
+            zooKeeper.wait();
         }
     }
 
-    public void close(final ZooKeeper zk) throws InterruptedException {
-        zk.close();
+    public void close() throws InterruptedException {
+        zooKeeper.close();
     }
 
     /**
      * When we register a {@code Watcher} with {@code ZooKeeper::exists}, {@code ZooKeeper::getChildren}, or {@code ZooKeeper::getData},
      * we get a one-time trigger that will be invoked on that {@code Watcher}
      */
-    public void watchTargetZNode(final ZooKeeper zk) throws KeeperException, InterruptedException {
+    public void watchTargetZNode() throws KeeperException, InterruptedException {
         val targetZNode = "/target_znode";
-        val stat = zk.exists(targetZNode, this);
+        val stat = zooKeeper.exists(targetZNode, this);
         if(stat == null) return; // is znode does not exist, then null is returned
 
-        val data = zk.getData(targetZNode, this, stat);
-        val children = zk.getChildren(targetZNode, this);
+        val data = zooKeeper.getData(targetZNode, this, stat);
+        val children = zooKeeper.getChildren(targetZNode, this);
 
         System.out.println("data: " + new String(data) + " children: " + children);
 
@@ -101,9 +96,9 @@ public class ZooKeeperThreadingModelExample implements Watcher {
                     // this state means successful connection to zk server
                     System.out.println("connected to ZK server");
                 } else { // if zookeeper sends a disconnect event, it will be handled here.
-                    synchronized (monitor) {
+                    synchronized (zooKeeper) {
                         System.out.println("Disconnect from ZK server");
-                        monitor.notifyAll();
+                        zooKeeper.notifyAll();
                     }
                 }
                 break;
@@ -123,9 +118,10 @@ public class ZooKeeperThreadingModelExample implements Watcher {
                 break;
         }
 
-        /*
-         If you want persistent event subscription, you will have to re-run `watchTargetZNode(ZooKeeper)` here
-         to create another subscription
-         */
+        try {
+            watchTargetZNode();
+        } catch (final KeeperException | InterruptedException e) {
+            e.printStackTrace();
+        }
     }
 }

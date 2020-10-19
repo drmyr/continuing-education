@@ -1,4 +1,4 @@
-package continuing.education.zookeeper;
+package continuing.education.distributedsystems.zookeeper;
 
 import lombok.AccessLevel;
 import lombok.experimental.FieldDefaults;
@@ -59,6 +59,7 @@ public class ServiceRegistryDiscovery implements Watcher {
     private void createServiceRegistryZNode() throws InterruptedException {
         try {
             if(isNull(zooKeeper.exists(SERVICE_REGISTRY, false))) {
+                // service registry znode should be persistent, but registered instances will not be.
                 zooKeeper.create(SERVICE_REGISTRY, new byte[] {}, ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
             }
         } catch (final KeeperException e) {
@@ -70,6 +71,7 @@ public class ServiceRegistryDiscovery implements Watcher {
     }
 
     public void registerToCluster(final String metaData) throws KeeperException, InterruptedException {
+        // register this instance ephemerally. if the nodes fails/disconnects, we tear down the service registry for it.
         this.serviceRegistryPath = zooKeeper.create(SERVICE_REGISTRY + "/n_", metaData.getBytes(), ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.EPHEMERAL_SEQUENTIAL);
     }
 
